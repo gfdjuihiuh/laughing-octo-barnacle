@@ -1,0 +1,38 @@
+# Eyes 新闻之眼 — 主配置
+
+# DeepSeek API 设置
+api:
+  base_url: "https://api.deepseek.com"
+  model: "deepseek-chat"
+  max_tokens: 4096
+  temperature: 0.3
+
+# 抓取设置
+fetch:
+  lookback_hours: 24          # 只保留过去 N 小时内的新闻
+  timeout_seconds: 15          # 单个源抓取超时
+  max_retries: 2               # 失败重试次数
+  max_workers: 12              # 并发抓取线程数
+  # HTTP 代理（访问国外源时需要，设为空字符串禁用）
+  proxy: "http://127.0.0.1:10808"
+
+# 去重设置
+dedup:
+  title_similarity_threshold: 0.85   # bigram Jaccard 相似度阈值
+  enable_cross_day_dedup: true       # 跨日去重（防止同一新闻连续上榜）
+  seen_state_file: "state/seen.json"
+
+# 摘要设置
+summary:
+  max_articles_per_category: 8       # 每领域最多送摘要的候选条数
+  content_truncate_chars: 600        # 正文截断长度（控制 token 成本）
+
+# 输出设置
+output:
+  reports_dir: "reports"
+  enable_terminal_output: true
+
+# 日志
+logging:
+  level: "INFO"
+  log_file: "logs/run.log"

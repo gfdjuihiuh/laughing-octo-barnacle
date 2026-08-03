@@ -1,0 +1,12 @@
+[project]
+name = "eyes"
+version = "0.1.0"
+description = "🧿 新闻之眼 — 全领域新闻聚合摘要系统"
+requires-python = ">=3.12"
+
+[project.scripts]
+eyes = "eyes.__main__:main"
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"

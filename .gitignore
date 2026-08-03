@@ -10,3 +10,13 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Eyes project
+.env
+.venv/
+logs/
+state/
+reports/
+__pycache__/
+*.pyc
+*.egg-info/
