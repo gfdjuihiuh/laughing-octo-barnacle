@@ -31,6 +31,8 @@ summary:
 output:
   reports_dir: "reports"
   enable_terminal_output: true
+  # 额外输出目录（例如桌面，留空则不启用）
+  extra_output_dir: "C:\\Users\\Blue\\Desktop"
 
 # 日志
 logging:

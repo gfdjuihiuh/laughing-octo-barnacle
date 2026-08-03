@@ -73,31 +73,44 @@ def render_markdown(report: DailyReport) -> str:
 
 
 def write_report(report: DailyReport, dry_run: bool = False) -> str:
-    """写入日报文件，返回文件路径。dry_run 时仅返回内容不写文件。"""
+    """写入日报文件，返回主文件路径。dry_run 时仅返回内容不写文件。"""
     cfg = load_config()
     reports_dir = PROJECT_ROOT / cfg["output"]["reports_dir"]
     reports_dir.mkdir(parents=True, exist_ok=True)
 
     content = render_markdown(report)
-    filename = f"{report.date}.md"
+    filename = f"新闻日报-{report.date}.md"
     filepath = reports_dir / filename
 
     if dry_run:
         return content
 
-    # 原子写入：先写临时文件再 rename
-    tmp = NamedTemporaryFile(mode="w", suffix=".md", delete=False,
-                             encoding="utf-8", dir=str(reports_dir))
-    try:
-        tmp.write(content)
-        tmp.flush()
-        os.replace(tmp.name, str(filepath))
-    finally:
-        if os.path.exists(tmp.name):
-            os.unlink(tmp.name)
+    # 原子写入主目录
+    _atomic_write(content, reports_dir, filename)
+
+    # 额外输出目录（如桌面）
+    extra_dir = cfg["output"].get("extra_output_dir", "")
+    if extra_dir:
+        extra_path = Path(extra_dir)
+        extra_path.mkdir(parents=True, exist_ok=True)
+        _atomic_write(content, extra_path, filename)
+        logger.info(f"日报已同步到: {extra_path / filename}")
 
     logger.info(f"日报已写入: {filepath}")
     return str(filepath)
+
+
+def _atomic_write(content: str, directory: Path, filename: str) -> None:
+    """原子写入：先写临时文件再 rename，防止半成品"""
+    tmp = NamedTemporaryFile(mode="w", suffix=".md", delete=False,
+                             encoding="utf-8", dir=str(directory))
+    try:
+        tmp.write(content)
+        tmp.flush()
+        os.replace(tmp.name, str(directory / filename))
+    finally:
+        if os.path.exists(tmp.name):
+            os.unlink(tmp.name)
 
 
 def print_to_terminal(report: DailyReport) -> None:
