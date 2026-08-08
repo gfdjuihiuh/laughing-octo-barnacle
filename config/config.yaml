@@ -24,7 +24,13 @@ dedup:
 
 # 摘要设置
 summary:
-  max_articles_per_category: 8       # 每领域最多送摘要的候选条数
+  max_articles_per_category: 4       # 每领域最多送摘要的候选条数（默认值）
+  # 各领域自定义条数（未列出的用默认值）
+  category_max:
+    科技: 5
+    文化: 2
+    民生: 3
+    政治: 3
   content_truncate_chars: 600        # 正文截断长度（控制 token 成本）
 
 # 输出设置
@@ -32,7 +38,12 @@ output:
   reports_dir: "reports"
   enable_terminal_output: true
   # 额外输出目录（例如桌面，留空则不启用）
-  extra_output_dir: "C:\\Users\\Blue\\Desktop"
+  extra_output_dir: "C:\\Users\\Blue\\Desktop\\新闻摘要"
+
+# 推送设置
+push:
+  # Server酱 SendKey（从 https://sct.ftqq.com 获取），留空不推送
+  serverchan_key: ""
 
 # 日志
 logging:

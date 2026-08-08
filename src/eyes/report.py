@@ -25,21 +25,6 @@ def render_markdown(report: DailyReport) -> str:
         f"",
     ]
 
-    # 先收集所有 digest 做「今日要闻」
-    all_items = []
-    for cat in report.categories:
-        for item in cat.items:
-            all_items.append((cat.category, item))
-
-    if all_items:
-        lines.append("## 📌 今日要闻")
-        lines.append("")
-        for i, (cat, item) in enumerate(all_items[:10], 1):
-            lines.append(f"{i}. **[{cat}]** {item.title} — _{item.source}_")
-        lines.append("")
-        lines.append("---")
-        lines.append("")
-
     # 各领域详细
     for cat in report.categories:
         lines.append(f"## {cat.category}")
@@ -60,8 +45,6 @@ def render_markdown(report: DailyReport) -> str:
             lines.append(f"### {i}. {item.title}")
             lines.append("")
             lines.append(f"{item.summary}")
-            lines.append("")
-            lines.append(f"📰 来源：**{item.source}**  |  [阅读原文]({item.link})")
             lines.append("")
 
         lines.append("")
@@ -101,16 +84,26 @@ def write_report(report: DailyReport, dry_run: bool = False) -> str:
 
 
 def _atomic_write(content: str, directory: Path, filename: str) -> None:
-    """原子写入：先写临时文件再 rename，防止半成品"""
+    """写入文件：先写临时文件再 rename，失败则直接写入"""
+    import time
+    target = directory / filename
     tmp = NamedTemporaryFile(mode="w", suffix=".md", delete=False,
                              encoding="utf-8", dir=str(directory))
+    tmp_path = tmp.name
     try:
         tmp.write(content)
         tmp.flush()
-        os.replace(tmp.name, str(directory / filename))
+        try:
+            os.replace(tmp_path, str(target))
+        except (PermissionError, OSError):
+            # Windows 锁文件问题：直接写入目标文件
+            target.write_text(content, encoding="utf-8")
     finally:
-        if os.path.exists(tmp.name):
-            os.unlink(tmp.name)
+        if os.path.exists(tmp_path):
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
 
 
 def print_to_terminal(report: DailyReport) -> None:
@@ -137,7 +130,7 @@ def print_to_terminal(report: DailyReport) -> None:
                 console.print(f"  [red]⚠ {cat.error}[/red]")
 
             for i, item in enumerate(cat.items[:5], 1):
-                console.print(f"  {i}. [bold]{item.title}[/bold] — [green]{item.source}[/green]")
+                console.print(f"  {i}. [bold]{item.title}[/bold]")
                 console.print(f"     {item.summary[:120]}{'...' if len(item.summary) > 120 else ''}")
 
         console.print(f"\n[dim]─── 完整报告见 reports/{report.date}.md ───[/dim]")
@@ -150,6 +143,6 @@ def print_to_terminal(report: DailyReport) -> None:
         for cat in report.categories:
             print(f"\n▍{cat.category} — {cat.digest}")
             for i, item in enumerate(cat.items[:5], 1):
-                print(f"  {i}. {item.title} — {item.source}")
+                print(f"  {i}. {item.title}")
                 print(f"     {item.summary[:120]}")
         print(f"\n--- 完整报告见 reports/{report.date}.md ---")

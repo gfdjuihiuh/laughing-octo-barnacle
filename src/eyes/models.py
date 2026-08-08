@@ -6,6 +6,21 @@ from typing import Optional
 
 
 @dataclass
+class WechatArticle:
+    """微信公众号文章"""
+    title: str
+    url: str                # mp.weixin.qq.com 直链
+    account: str            # 公众号名称
+    date_str: str           # 发布日期字符串
+    content: str            # 全文纯文本
+    summary: str = ""       # AI 提取的核心要点
+
+    def key(self) -> str:
+        """用于去重的唯一标识"""
+        return self.url or self.title
+
+
+@dataclass
 class Article:
     """单条新闻"""
     title: str

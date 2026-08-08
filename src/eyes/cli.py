@@ -48,6 +48,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--verbose", "-v", action="store_true",
         help="详细日志输出",
     )
+    parser.add_argument(
+        "--wechat", action="store_true",
+        help="微信公众号文章抓取模式（抓取 + AI 摘要 + 推送）",
+    )
+    parser.add_argument(
+        "--wechat-account", type=str, default=None,
+        help="仅抓取指定公众号，逗号分隔（不传则抓取全部已配置账号）",
+    )
 
     return parser
 

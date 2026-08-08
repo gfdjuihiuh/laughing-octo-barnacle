@@ -15,3 +15,4 @@ REM 记录退出码
 if %ERRORLEVEL% NEQ 0 (
     echo [%date% %time%] eyes 运行失败，退出码: %ERRORLEVEL% >> logs\cron.log
 )
+REM 日报会由 CowAgent 定时任务每天早上8点自动推送到企业微信

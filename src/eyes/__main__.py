@@ -3,7 +3,10 @@
 import logging
 import sys
 from collections import OrderedDict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+
+# 中国时区 UTC+8
+CHINA_TZ = timezone(timedelta(hours=8))
 
 from .cli import build_parser, parse_categories
 from .config import VALID_CATEGORIES, load_config, load_sources
@@ -11,6 +14,7 @@ from .fetch import check_sources, fetch_all
 from .dedup import cross_day_filter, deduplicate, filter_by_category_events
 from .logging_setup import setup_logging
 from .models import DailyReport
+from .push import push_to_wechat
 from .report import print_to_terminal, write_report
 from .summarize import summarize_all
 
@@ -20,6 +24,11 @@ logger = logging.getLogger("eyes")
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
+
+    # --wechat 模式
+    if args.wechat:
+        main_wechat()
+        return
 
     # 日志
     cfg = load_config()
@@ -43,7 +52,7 @@ def main() -> None:
             print(f"错误：日期格式无效 '{args.date}'，应为 YYYY-MM-DD", file=sys.stderr)
             sys.exit(1)
     else:
-        report_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        report_date = datetime.now(CHINA_TZ).strftime("%Y-%m-%d")
 
     # 加载配置
     sources = load_sources()
@@ -108,9 +117,104 @@ def main() -> None:
     if not args.no_terminal:
         print_to_terminal(report)
 
+    # 推送到微信
     if not args.dry_run:
+        push_to_wechat(report)
         logger.info(f"日报已保存: {filepath}")
     logger.info("完成")
+
+
+def main_wechat() -> None:
+    """微信公众号文章抓取模式"""
+    import io
+    import sys
+
+    # Fix Windows GBK encoding for emoji output
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+    from .config import load_config, load_wechat_accounts
+    from .logging_setup import setup_logging
+    from .wechat_fetch import fetch_all_accounts
+    from .wechat_report import (
+        build_html_report, build_text_report, summarize_all_articles,
+    )
+    from .push import push_to_pushplus
+
+    # 解析命令行参数
+    parser = build_parser()
+    args = parser.parse_args()
+
+    cfg = load_config()
+    log_level = "DEBUG" if args.verbose else cfg["logging"]["level"]
+    setup_logging(level=log_level, log_file=cfg["logging"]["log_file"])
+    logger.info("🔍 微信公众号抓取模式启动")
+
+    # 加载配置
+    wc_cfg = load_wechat_accounts()
+    accounts = wc_cfg["accounts"]
+    if not accounts:
+        logger.warning("未配置任何公众号，请在 config/wechat_accounts.yaml 中添加")
+        return
+    if args.wechat_account:
+        selected = [a.strip() for a in args.wechat_account.split(",")]
+        accounts = [a for a in accounts if a in selected]
+        if not accounts:
+            logger.warning(f"指定的公众号不在配置中: {args.wechat_account}")
+            return
+        logger.info(f"限定公众号: {', '.join(accounts)}")
+
+    logger.info(f"目标公众号 ({len(accounts)}): {', '.join(accounts)}")
+
+    # 确定日期
+    if args.date:
+        report_date = args.date
+    else:
+        report_date = datetime.now(CHINA_TZ).strftime("%Y-%m-%d")
+
+    # 1. 抓取文章
+    articles_by_account = fetch_all_accounts(
+        accounts,
+        max_days=wc_cfg["max_days"],
+        max_per_account=wc_cfg["max_per_account"],
+        search_pages=wc_cfg["search_pages"],
+        timeout=wc_cfg["timeout"],
+    )
+
+    total = sum(len(v) for v in articles_by_account.values())
+    if total == 0:
+        logger.warning("未抓取到任何文章")
+        # 还是推送一条通知
+        html = build_html_report(articles_by_account, report_date)
+        if not args.dry_run:
+            push_to_pushplus(
+                f"📊 微信公众号日报 · {report_date}",
+                html,
+                template="html",
+            )
+        return
+
+    # 2. AI 摘要
+    if not args.dry_run:
+        articles_by_account = summarize_all_articles(articles_by_account)
+
+    # 3. 生成报告
+    if not args.no_terminal:
+        text = build_text_report(articles_by_account, report_date)
+        print(text)
+
+    # 4. 推送
+    if not args.dry_run:
+        html = build_html_report(articles_by_account, report_date)
+        push_to_pushplus(
+            f"📊 微信公众号日报 · {report_date}",
+            html,
+            template="html",
+        )
+
+    logger.info("微信抓取完成")
 
 
 if __name__ == "__main__":

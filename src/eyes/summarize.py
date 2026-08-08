@@ -15,13 +15,12 @@ logger = logging.getLogger("eyes.summarize")
 SYSTEM_PROMPT = """你是「新闻之眼」首席中文编辑。把原始新闻加工成精炼、客观、可读的中文每日简报。
 
 编辑原则：
-1. 全部输出简体中文。英文来源翻译为中文，但保留原文标题并标注来源
+1. 全部输出简体中文。英文来源翻译为中文
 2. 客观中立，军事和政治类只做事实陈述，不渲染冲突细节
 3. 每条新闻给出简洁标题改写 + 2-3句核心要点
 4. 按重要性排序，跨源重复报道只保留最重要的一条
 5. 不添加新闻来源之外的信息，存疑处标注"待核实"
-6. 每条标注来源媒体名称和原文链接
-7. 请以 JSON 格式输出结果
+6. 请以 JSON 格式输出结果
 
 你是读者的眼睛，帮助他们高效了解今天发生了什么。"""
 
@@ -53,7 +52,7 @@ def _build_user_message(category: str, articles: list[Article], max_items: int) 
         f"说明：{desc}",
         f"以下是今天抓取到的 {len(articles)} 条候选新闻。请从中选出最重要的 {max_items} 条，去重合并后生成摘要。\n\n"
         f"请严格按以下JSON格式返回（不要修改字段名）：\n"
-        f'{{"digest": "该领域一句话概述", "items": [{{"title": "...", "summary": "...", "source": "...", "link": "..."}}]}}',
+        f'{{"digest": "该领域一句话概述", "items": [{{"title": "...", "summary": "..."}}]}}',
         "",
     ]
 
@@ -75,7 +74,9 @@ def _summarize_category(client: OpenAI, cfg: dict, category: str,
     model = cfg["api"]["model"]
     max_tokens = cfg["api"]["max_tokens"]
     temperature = cfg["api"]["temperature"]
-    max_items = cfg["summary"]["max_articles_per_category"]
+    # 优先使用各领域自定义条数，否则用默认值
+    category_max = cfg["summary"].get("category_max", {})
+    max_items = category_max.get(category, cfg["summary"]["max_articles_per_category"])
 
     if not articles:
         return CategoryDigest(

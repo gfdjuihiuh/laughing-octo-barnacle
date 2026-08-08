@@ -63,6 +63,20 @@ def load_sources() -> dict[str, list[dict]]:
     return sources
 
 
+def load_wechat_accounts() -> dict:
+    """加载微信公众号抓取配置，返回 {accounts: [...], settings: {...}}"""
+    raw = _load_yaml("wechat_accounts.yaml")
+    wc = raw.get("wechat", {})
+    return {
+        "accounts": wc.get("accounts", []),
+        "max_days": wc.get("max_days", 1),
+        "max_per_account": wc.get("max_per_account", 5),
+        "search_pages": wc.get("search_pages", 2),
+        "request_delay": wc.get("request_delay", 0.8),
+        "timeout": wc.get("timeout", 15),
+    }
+
+
 def load_api_key() -> str:
     """从 .env 文件或环境变量加载 DEEPSEEK_API_KEY"""
     # 尝试 python-dotenv

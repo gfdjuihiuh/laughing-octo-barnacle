@@ -1,0 +1,20 @@
+# 微信公众号抓取配置
+# 通过搜狗微信搜索发现文章，抓取 mp.weixin.qq.com 全文
+
+# 抓取设置
+wechat:
+  accounts:
+    - "聪明小阿姨"
+    - "打板宝哥"
+    - "雪球"
+  max_days: 7           # 只抓取 N 天内的文章
+  max_per_account: 5    # 每个公众号最多抓取篇数
+  search_pages: 2       # 搜狗搜索结果翻页数（每页10条）
+  request_delay: 0.8    # 请求间隔（秒）
+  timeout: 15           # 单次请求超时（秒）
+
+  # 推送设置
+  push:
+    # PushPlus Token（从 https://pushplus.hxtrip.com 获取），留空不推送
+    # 也可通过环境变量 PUSHPLUS_TOKEN 设置
+    pushplus_token: ""
