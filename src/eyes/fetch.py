@@ -26,10 +26,12 @@ HEADERS = {
 
 def _build_session() -> requests.Session:
     """构建带代理的 requests Session"""
+    import os
     cfg = load_config()
     session = requests.Session()
     session.headers.update(HEADERS)
-    proxy_url = cfg["fetch"].get("proxy", "")
+    # 环境变量 EYES_PROXY 可覆盖代理设置（GitHub Actions 设为空禁用代理）
+    proxy_url = os.getenv("EYES_PROXY", cfg["fetch"].get("proxy", ""))
     if proxy_url:
         session.proxies = {"http": proxy_url, "https": proxy_url}
         logger.debug(f"使用代理: {proxy_url}")

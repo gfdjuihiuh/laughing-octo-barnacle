@@ -14,8 +14,8 @@ from .fetch import check_sources, fetch_all
 from .dedup import cross_day_filter, deduplicate, filter_by_category_events
 from .logging_setup import setup_logging
 from .models import DailyReport
-from .push import push_to_wechat
-from .report import print_to_terminal, write_report
+from .push import push_to_pushplus, push_to_wechat
+from .report import print_to_terminal, render_news_html, write_report
 from .summarize import summarize_all
 
 logger = logging.getLogger("eyes")
@@ -119,6 +119,14 @@ def main() -> None:
 
     # 推送到微信
     if not args.dry_run:
+        # PushPlus 推送（HTML 格式）
+        html = render_news_html(report)
+        push_to_pushplus(
+            f"🧿 新闻之眼 · {report.date} 日报",
+            html,
+            template="html",
+        )
+        # 兼容旧 Server酱 推送
         push_to_wechat(report)
         logger.info(f"日报已保存: {filepath}")
     logger.info("完成")

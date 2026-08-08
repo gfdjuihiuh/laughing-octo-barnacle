@@ -106,6 +106,62 @@ def _atomic_write(content: str, directory: Path, filename: str) -> None:
                 pass
 
 
+def render_news_html(report: DailyReport) -> str:
+    """渲染 HTML 格式日报（适配 PushPlus 微信推送）"""
+    lines = [
+        '<!DOCTYPE html><html><head><meta charset="utf-8">',
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+        '<style>',
+        'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:12px;font-size:14px;}',
+        '.header{text-align:center;margin-bottom:16px;}',
+        '.header h2{margin:0;font-size:18px;}',
+        '.header p{color:#888;font-size:12px;margin:4px 0 0;}',
+        '.cat{margin-bottom:14px;}',
+        '.cat-title{font-size:15px;font-weight:bold;padding:6px 10px;',
+        'background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-radius:6px 6px 0 0;}',
+        '.cat-digest{padding:8px 10px;background:#f5f5f5;color:#666;font-size:12px;}',
+        '.item{padding:8px 10px;border:1px solid #e0e0e0;border-top:none;}',
+        '.item:last-of-type{border-radius:0 0 6px 6px;}',
+        '.item-title{font-weight:bold;color:#333;margin-bottom:4px;}',
+        '.item-summary{color:#555;font-size:13px;line-height:1.5;}',
+        '.footer{text-align:center;font-size:11px;color:#bbb;margin-top:16px;',
+        'padding-top:12px;border-top:1px solid #eee;}',
+        '</style></head><body>',
+        '<div class="header">',
+        f'<h2>🧿 新闻之眼 · 每日简报</h2>',
+        f'<p>{report.date} | {report.model} | {report.total_sources}源·{report.total_articles}条 | 过去{report.lookback_hours}h</p>',
+        '</div>',
+    ]
+
+    for cat in report.categories:
+        if not cat.items and not cat.error:
+            continue
+        lines.append('<div class="cat">')
+        lines.append(f'<div class="cat-title">{cat.category}</div>')
+        lines.append(f'<div class="cat-digest">{cat.digest}</div>')
+
+        if cat.error:
+            lines.append(f'<div class="item"><span style="color:red">⚠ {cat.error}</span></div>')
+
+        for item in cat.items:
+            title_html = item.title.replace("&", "&amp;").replace("<", "&lt;")
+            summary_html = item.summary.replace("&", "&amp;").replace("<", "&lt;").replace("\n", "<br>")
+            lines.append('<div class="item">')
+            lines.append(f'<div class="item-title">{title_html}</div>')
+            lines.append(f'<div class="item-summary">{summary_html}</div>')
+            if item.link:
+                lines.append(f'<div style="font-size:11px;margin-top:4px;">'
+                           f'<a href="{item.link}" style="color:#667eea;">阅读原文</a> | 来源：{item.source}</div>')
+            lines.append('</div>')
+
+        lines.append('</div>')
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    lines.append(f'<div class="footer">🧿 新闻之眼 · 自动生成于 {ts}</div>')
+    lines.append('</body></html>')
+    return "\n".join(lines)
+
+
 def print_to_terminal(report: DailyReport) -> None:
     """终端彩色输出精简版"""
     try:
